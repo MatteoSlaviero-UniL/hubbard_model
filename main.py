@@ -20,6 +20,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.success_count = 0
         self.fail_count = 0
         self.autoplay_running = False
+        self.electric_field_strength = 0.0
 
         # Timer for autoplay
         self.timer = QtCore.QTimer(self)
@@ -74,6 +75,15 @@ class MainWindow(QtWidgets.QMainWindow):
         self.step_interval_input.setValue(self.STEP_INTERVAL)
         control_layout.addWidget(QtWidgets.QLabel("Step Interval (seconds):"))
         control_layout.addWidget(self.step_interval_input)
+
+        # Electric Field Slider
+        self.electric_field_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal, self)
+        self.electric_field_slider.setRange(0, 100)  # Represent electric field from 0.0 to 1.0
+        self.electric_field_slider.setValue(int(self.electric_field_strength * 100))  # Initialize at 0.0
+        self.electric_field_slider.valueChanged.connect(self.update_electric_field)
+
+        control_layout.addWidget(QtWidgets.QLabel("Electric Field Strength (0-1):"))
+        control_layout.addWidget(self.electric_field_slider)
 
         main_layout.addLayout(control_layout)
 
@@ -139,7 +149,15 @@ class MainWindow(QtWidgets.QMainWindow):
         self.U = self.u_input.value()
         self.T = self.t_input.value()
 
-        self.hubbard = Hubbard(size=self.LATTICE_SIZE, u=self.U, t=self.T, num_electrons=self.NUM_ELECTRONS)
+        self.hubbard = Hubbard(
+            size=self.LATTICE_SIZE,
+            u=self.U,
+            t=self.T,
+            num_electrons=self.NUM_ELECTRONS,
+            seed=42  # Default seed
+        )
+        
+        self.hubbard.electric_field_strength = self.electric_field_strength  # Add electric field strength
 
         if mode == "random":
             self.hubbard.initialize_lattice()
@@ -235,6 +253,15 @@ class MainWindow(QtWidgets.QMainWindow):
                     part for part in current_style.split(";") if not part.strip().startswith("border")
                 )
                 self.grid_cells[x][y].setStyleSheet(f"{updated_style}; border: 1px solid black;")
+
+    def update_electric_field(self, value):
+        """
+        Update the electric field strength based on the slider value.
+        """
+        self.electric_field_strength = value / 100.0  # Scale to range [0.0, 1.0]
+        print(f"Electric Field Strength updated to: {self.electric_field_strength}")
+        if self.hubbard:
+            self.hubbard.electric_field_strength = self.electric_field_strength
 
     def update_grid(self):
         """

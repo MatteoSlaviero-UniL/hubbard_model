@@ -16,7 +16,10 @@ class Hubbard:
         self.t = t
         self.num_electrons = num_electrons
         self.seed = seed
+        self.electric_field_strength = 0.0
         self.lattice = None
+        self.left = 0
+        self.right = 1
         random.seed(seed)
         np.random.seed(seed)
 
@@ -59,8 +62,8 @@ class Hubbard:
         """
         self.lattice = np.zeros((2, self.size, self.size), dtype=int)
         mid = self.size // 2
-        for x in range(mid):
-            for y in range(self.size):
+        for x in range(self.size):
+            for y in range(mid):
                 self.lattice[0, x, y] = 1  # Up electron
                 self.lattice[1, x, y] = 1  # Down electron
 
@@ -89,9 +92,22 @@ class Hubbard:
         spin, x, y = occupied_sites[site_idx]
 
         # Choose a random neighbor (periodic boundary conditions)
-        dx, dy = random.choice([(0, 1), (0, -1), (1, 0), (-1, 0)])
+        if random.random() < self.electric_field_strength:
+            # Bias towards right movement
+            neighbors = [(0, 1), (0, -1), (1, 0), (1, 0)]  # Two (1, 0) for bias
+        else:
+            neighbors = [(0, 1), (0, -1), (1, 0), (-1, 0)]
+
+        dx, dy = random.choice(neighbors)
         target_x = (x + dx) % self.size
         target_y = (y + dy) % self.size
+
+        if target_x > x:
+            self.right +=1
+        elif target_x < x:
+            self.left +=1
+
+        print(f"Left: {self.left}, Right: {self.right}")
 
         # Check target site
         target_spin = spin
