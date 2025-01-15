@@ -156,7 +156,7 @@ class MainWindow(QtWidgets.QMainWindow):
             num_electrons=self.NUM_ELECTRONS,
             seed=42  # Default seed
         )
-        
+
         self.hubbard.electric_field_strength = self.electric_field_strength  # Add electric field strength
 
         if mode == "random":
@@ -188,12 +188,12 @@ class MainWindow(QtWidgets.QMainWindow):
 
         for x in range(self.LATTICE_SIZE):
             for y in range(self.LATTICE_SIZE):
-                label = self.grid_cells[x][y]
+                label = self.grid_cells[y][x]
                 label.setAlignment(QtCore.Qt.AlignCenter)
                 label.setFont(QtGui.QFont("Arial", 10, QtGui.QFont.Bold))
                 label.setFixedSize(40, 40)
                 label.setStyleSheet("border: 1px solid black;")
-                self.grid_layout.addWidget(label, x, y)
+                self.grid_layout.addWidget(label, y, x)
 
     def perform_step(self):
         """
@@ -248,11 +248,11 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         for x in range(self.LATTICE_SIZE):
             for y in range(self.LATTICE_SIZE):
-                current_style = self.grid_cells[x][y].styleSheet()
+                current_style = self.grid_cells[y][x].styleSheet()
                 updated_style = ";".join(
                     part for part in current_style.split(";") if not part.strip().startswith("border")
                 )
-                self.grid_cells[x][y].setStyleSheet(f"{updated_style}; border: 1px solid black;")
+                self.grid_cells[y][x].setStyleSheet(f"{updated_style}; border: 1px solid black;")
 
     def update_electric_field(self, value):
         """
@@ -294,19 +294,19 @@ class MainWindow(QtWidgets.QMainWindow):
                     background_color = "rgba(255, 255, 255, 0)"  # Transparent for empty
 
                 # Update cell display
-                self.grid_cells[x][y].setText(text)
-                self.grid_cells[x][y].setStyleSheet(f"background-color: {background_color}; border: 1px solid black;")
+                self.grid_cells[y][x].setText(text)
+                self.grid_cells[y][x].setStyleSheet(f"background-color: {background_color}; border: 1px solid black;")
 
     def highlight_cell(self, x, y, color):
         """
         Highlight a specific cell in the grid with a border color, preserving the background color.
         """
         if 0 <= x < self.LATTICE_SIZE and 0 <= y < self.LATTICE_SIZE:
-            current_style = self.grid_cells[x][y].styleSheet()
+            current_style = self.grid_cells[y][x].styleSheet()
             updated_style = ";".join(
                 part for part in current_style.split(";") if not part.strip().startswith("border")
             )
-            self.grid_cells[x][y].setStyleSheet(f"{updated_style}; border: 2px solid {color};")
+            self.grid_cells[y][x].setStyleSheet(f"{updated_style}; border: 2px solid {color};")
 
 
 if __name__ == "__main__":
