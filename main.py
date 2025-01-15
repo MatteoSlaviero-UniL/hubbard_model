@@ -19,8 +19,14 @@ class MainWindow(QtWidgets.QMainWindow):
         self.hubbard = None
         self.success_count = 0
         self.fail_count = 0
+        self.total_electrons = 0
+        self.initial_paired_electrons = 0
+        self.total_paired = 0
+        self.pairing_events = 0
+        self.unpairing_events = 0
         self.autoplay_running = False
         self.electric_field_strength = 0.0
+        self.flux = 0
 
         # Timer for autoplay
         self.timer = QtCore.QTimer(self)
@@ -76,16 +82,20 @@ class MainWindow(QtWidgets.QMainWindow):
         control_layout.addWidget(QtWidgets.QLabel("Step Interval (seconds):"))
         control_layout.addWidget(self.step_interval_input)
 
+        main_layout.addLayout(control_layout)
+
         # Electric Field Slider
         self.electric_field_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal, self)
         self.electric_field_slider.setRange(0, 100)  # Represent electric field from 0.0 to 1.0
         self.electric_field_slider.setValue(int(self.electric_field_strength * 100))  # Initialize at 0.0
         self.electric_field_slider.valueChanged.connect(self.update_electric_field)
 
-        control_layout.addWidget(QtWidgets.QLabel("Electric Field Strength (0-1):"))
-        control_layout.addWidget(self.electric_field_slider)
+        # Electric Field Slider Layout
+        electric_field_layout = QtWidgets.QHBoxLayout()
+        electric_field_layout.addWidget(QtWidgets.QLabel("Electric Field Strength (0-1):"))
+        electric_field_layout.addWidget(self.electric_field_slider)
 
-        main_layout.addLayout(control_layout)
+        main_layout.addLayout(electric_field_layout)
 
         # Grid Layout for Lattice Visualization
         self.grid_layout = QtWidgets.QGridLayout()
@@ -114,13 +124,34 @@ class MainWindow(QtWidgets.QMainWindow):
         self.autoplay_button.clicked.connect(self.toggle_autoplay)
         button_layout.addWidget(self.autoplay_button)
 
+        main_layout.addLayout(button_layout)
+
+        # Statistics Layout
+        stats_layout = QtWidgets.QHBoxLayout()
+
         self.success_label = QtWidgets.QLabel("Successful Steps: 0", self)
-        button_layout.addWidget(self.success_label)
+        stats_layout.addWidget(self.success_label)
 
         self.fail_label = QtWidgets.QLabel("Failed Steps: 0", self)
-        button_layout.addWidget(self.fail_label)
+        stats_layout.addWidget(self.fail_label)
 
-        main_layout.addLayout(button_layout)
+        self.acceptance_label = QtWidgets.QLabel("Acceptance Rate: 0%", self)
+        stats_layout.addWidget(self.acceptance_label)
+
+        self.pairing_label = QtWidgets.QLabel("Pairing Percentage: 0%", self)
+        stats_layout.addWidget(self.pairing_label)
+
+        main_layout.addLayout(stats_layout)  # Add stats to the main layout
+
+        current_layout = QtWidgets.QHBoxLayout()
+
+        self.flux_label = QtWidgets.QLabel("Flux: 0", self)
+        current_layout.addWidget(self.flux_label)
+
+        self.conductivity_label = QtWidgets.QLabel("Normalized Average Flux: 0%", self)
+        current_layout.addWidget(self.conductivity_label)
+
+        main_layout.addLayout(current_layout)
 
     def initialize_random(self):
         """
@@ -168,6 +199,23 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.success_count = 0
         self.fail_count = 0
+        self.flux = 0
+        
+        self.total_paired = 0
+        self.total_electrons = 0
+        self.initial_paired_electrons = 0
+        self.pairing_events = 0
+        self.unpairing_events = 0
+
+        # Calculate initial paired electrons
+        for x in range(self.LATTICE_SIZE):
+            for y in range(self.LATTICE_SIZE):
+                if self.hubbard.lattice[0, x, y] == 1 and self.hubbard.lattice[1, x, y] == 1:
+                    self.initial_paired_electrons += 2
+                    self.total_paired += 2
+                    self.total_electrons += 2
+                elif self.hubbard.lattice[0, x, y] == 1 or self.hubbard.lattice[1, x, y] == 1:
+                    self.total_electrons +=1
 
         self.update_counters()
         self.setup_grid()
@@ -203,11 +251,24 @@ class MainWindow(QtWidgets.QMainWindow):
             QtWidgets.QMessageBox.warning(self, "Error", "Initialize the lattice first!")
             return
 
-        success, (x, y), spin, (target_x, target_y) = self.hubbard.simulate_step()
+        success, (x, y), spin, (target_x, target_y), broken_pairing = self.hubbard.simulate_step()
 
         if success:
             self.success_count += 1
             color = "green"
+
+            if broken_pairing:
+                self.unpairing_events += 1
+                self.total_paired -= 2
+            
+            if self.hubbard.lattice[0, target_x, target_y] == 1 and self.hubbard.lattice[1, target_x, target_y] == 1:
+                self.pairing_events += 1
+                self.total_paired +=2
+
+            if target_x == 0 and x == self.LATTICE_SIZE - 1:  # Wrapped from right to left
+                self.flux += 1
+            elif target_x == self.LATTICE_SIZE - 1 and x == 0:  # Wrapped from left to right
+                self.flux -= 1
         else:
             self.fail_count += 1
             color = "red"
@@ -242,6 +303,22 @@ class MainWindow(QtWidgets.QMainWindow):
         self.success_label.setText(f"Successful Steps: {self.success_count}")
         self.fail_label.setText(f"Failed Steps: {self.fail_count}")
 
+        total_steps = self.success_count + self.fail_count
+        if total_steps > 0:
+            acceptance_rate = (self.success_count / total_steps) * 100
+            conductivity = self.flux * self.LATTICE_SIZE * 200 / total_steps
+        else:
+            acceptance_rate = 0
+            conductivity = 0
+
+        self.acceptance_label.setText(f"Acceptance Rate: {acceptance_rate:.2f}%")
+        self.flux_label.setText(f"Flux: {self.flux}")
+        self.conductivity_label.setText(f"Normalized average 'flux': {conductivity:.2f}%")
+
+        pairing_percentage = (self.total_paired / self.total_electrons * 100) if self.total_electrons > 0 else 0
+
+        self.pairing_label.setText(f"Paired Electrons: {self.total_paired} ({pairing_percentage:.2f}%)")
+
     def clear_highlights(self):
         """
         Reset all cells' borders to the default style without altering background colors.
@@ -259,7 +336,6 @@ class MainWindow(QtWidgets.QMainWindow):
         Update the electric field strength based on the slider value.
         """
         self.electric_field_strength = value / 100.0  # Scale to range [0.0, 1.0]
-        print(f"Electric Field Strength updated to: {self.electric_field_strength}")
         if self.hubbard:
             self.hubbard.electric_field_strength = self.electric_field_strength
 

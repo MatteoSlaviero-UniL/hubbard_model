@@ -84,7 +84,7 @@ class Hubbard:
         # Select a random occupied site
         occupied_sites = np.argwhere(self.lattice > 0)
         if occupied_sites.size == 0:
-            return False, None, None, None
+            return False, None, None, None, False
 
         site_idx = np.random.randint(len(occupied_sites))
         spin, x, y = occupied_sites[site_idx]
@@ -105,7 +105,7 @@ class Hubbard:
         target_state = self.lattice[target_spin, target_x, target_y]
 
         if target_state == 1:  # Same spin at target, step fails
-            return False, (x, y), spin, (target_x, target_y)
+            return False, (x, y), spin, (target_x, target_y), False
 
         # Energy difference calculation
         companion_start = self.lattice[1 - spin, x, y]
@@ -122,7 +122,7 @@ class Hubbard:
             # Perform the move
             self.lattice[spin, x, y] = 0
             self.lattice[spin, target_x, target_y] = 1
-            return True, (x, y), spin, (target_x, target_y)
+            return True, (x, y), spin, (target_x, target_y), companion_start
 
         # Step fails
-        return False, (x, y), spin, (target_x, target_y)
+        return False, (x, y), spin, (target_x, target_y), companion_start
