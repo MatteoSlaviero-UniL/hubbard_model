@@ -2,6 +2,7 @@ import sys
 from PyQt5 import QtWidgets, QtGui, QtCore
 from hubbard import Hubbard
 
+COLOR_INTENSITY = 20
 
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
@@ -39,35 +40,40 @@ class MainWindow(QtWidgets.QMainWindow):
         main_layout = QtWidgets.QVBoxLayout(central_widget)
 
         # Parameter Controls
-        control_layout = QtWidgets.QFormLayout()
+        control_layout = QtWidgets.QHBoxLayout()
 
         self.lattice_size_input = QtWidgets.QSpinBox(self)
         self.lattice_size_input.setRange(2, 15)
         self.lattice_size_input.setValue(self.LATTICE_SIZE)
-        control_layout.addRow("Lattice Size (NxN):", self.lattice_size_input)
+        control_layout.addWidget(QtWidgets.QLabel("Lattice Size (NxN):"))
+        control_layout.addWidget(self.lattice_size_input)
 
         self.num_electrons_input = QtWidgets.QSpinBox(self)
         self.num_electrons_input.setRange(0, 2 * 15 * 15)
         self.num_electrons_input.setValue(self.NUM_ELECTRONS)
-        control_layout.addRow("Number of Electrons:", self.num_electrons_input)
+        control_layout.addWidget(QtWidgets.QLabel("Number of Electrons:"))
+        control_layout.addWidget(self.num_electrons_input)
 
         self.u_input = QtWidgets.QDoubleSpinBox(self)
         self.u_input.setRange(0.1, 100.0)
         self.u_input.setDecimals(2)
         self.u_input.setValue(self.U)
-        control_layout.addRow("U (On-Site Repulsion):", self.u_input)
+        control_layout.addWidget(QtWidgets.QLabel("U (On-Site Repulsion):"))
+        control_layout.addWidget(self.u_input)
 
         self.t_input = QtWidgets.QDoubleSpinBox(self)
         self.t_input.setRange(0.1, 100.0)
         self.t_input.setDecimals(2)
         self.t_input.setValue(self.T)
-        control_layout.addRow("T (Hopping Parameter):", self.t_input)
+        control_layout.addWidget(QtWidgets.QLabel("T (Hopping Parameter):"))
+        control_layout.addWidget(self.t_input)
 
         self.step_interval_input = QtWidgets.QDoubleSpinBox(self)
         self.step_interval_input.setRange(0.001, 2.0)
         self.step_interval_input.setDecimals(3)
         self.step_interval_input.setValue(self.STEP_INTERVAL)
-        control_layout.addRow("Step Interval (seconds):", self.step_interval_input)
+        control_layout.addWidget(QtWidgets.QLabel("Step Interval (seconds):"))
+        control_layout.addWidget(self.step_interval_input)
 
         main_layout.addLayout(control_layout)
 
@@ -78,9 +84,17 @@ class MainWindow(QtWidgets.QMainWindow):
         # Buttons and Counters
         button_layout = QtWidgets.QHBoxLayout()
 
-        self.init_button = QtWidgets.QPushButton("Initialize", self)
-        self.init_button.clicked.connect(self.initialize_lattice)
-        button_layout.addWidget(self.init_button)
+        self.init_random_button = QtWidgets.QPushButton("Initialize Random", self)
+        self.init_random_button.clicked.connect(self.initialize_random)
+        button_layout.addWidget(self.init_random_button)
+
+        self.init_af_button = QtWidgets.QPushButton("Initialize AF", self)
+        self.init_af_button.clicked.connect(self.initialize_af)
+        button_layout.addWidget(self.init_af_button)
+
+        self.init_localized_button = QtWidgets.QPushButton("Initialize Localized", self)
+        self.init_localized_button.clicked.connect(self.initialize_localized)
+        button_layout.addWidget(self.init_localized_button)
 
         self.play_button = QtWidgets.QPushButton("Perform Step", self)
         self.play_button.clicked.connect(self.perform_step)
@@ -98,9 +112,27 @@ class MainWindow(QtWidgets.QMainWindow):
 
         main_layout.addLayout(button_layout)
 
-    def initialize_lattice(self):
+    def initialize_random(self):
         """
-        Initialize the lattice and update the UI.
+        Initialize the lattice randomly and update the UI.
+        """
+        self.initialize_lattice("random")
+
+    def initialize_af(self):
+        """
+        Initialize the lattice in an antiferromagnetic way and update the UI.
+        """
+        self.initialize_lattice("af")
+
+    def initialize_localized(self):
+        """
+        Initialize the lattice in a localized way and update the UI.
+        """
+        self.initialize_lattice("localized")
+
+    def initialize_lattice(self, mode="random"):
+        """
+        Initialize the lattice based on the selected mode.
         """
         self.LATTICE_SIZE = self.lattice_size_input.value()
         self.NUM_ELECTRONS = self.num_electrons_input.value()
@@ -108,7 +140,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.T = self.t_input.value()
 
         self.hubbard = Hubbard(size=self.LATTICE_SIZE, u=self.U, t=self.T, num_electrons=self.NUM_ELECTRONS)
-        self.hubbard.initialize_lattice()
+
+        if mode == "random":
+            self.hubbard.initialize_lattice()
+        elif mode == "af":
+            self.hubbard.initialize_af()
+        elif mode == "localized":
+            self.hubbard.initialize_localized()
 
         self.success_count = 0
         self.fail_count = 0
@@ -188,11 +226,15 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def clear_highlights(self):
         """
-        Reset all cells' styles to the default grid appearance.
+        Reset all cells' borders to the default style without altering background colors.
         """
         for x in range(self.LATTICE_SIZE):
             for y in range(self.LATTICE_SIZE):
-                self.grid_cells[x][y].setStyleSheet("border: 1px solid black;")
+                current_style = self.grid_cells[x][y].styleSheet()
+                updated_style = ";".join(
+                    part for part in current_style.split(";") if not part.strip().startswith("border")
+                )
+                self.grid_cells[x][y].setStyleSheet(f"{updated_style}; border: 1px solid black;")
 
     def update_grid(self):
         """
@@ -203,6 +245,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
         lattice = self.hubbard.get_lattice()
 
+        # Calculate alpha value based on percentage
+        alpha = int(COLOR_INTENSITY / 100 * 255)  # Scale to 0-255 range
+
         for x in range(self.LATTICE_SIZE):
             for y in range(self.LATTICE_SIZE):
                 up = lattice[0, x, y]
@@ -210,21 +255,31 @@ class MainWindow(QtWidgets.QMainWindow):
 
                 if up and down:
                     text = "↑↓"
+                    background_color = f"rgba(0, 255, 0, {alpha})"  # Green for both spins
                 elif up:
                     text = "↑"
+                    background_color = f"rgba(255, 0, 0, {alpha})"  # Red for spin up
                 elif down:
                     text = "↓"
+                    background_color = f"rgba(0, 0, 255, {alpha})"  # Blue for spin down
                 else:
                     text = ""
+                    background_color = "rgba(255, 255, 255, 0)"  # Transparent for empty
 
+                # Update cell display
                 self.grid_cells[x][y].setText(text)
+                self.grid_cells[x][y].setStyleSheet(f"background-color: {background_color}; border: 1px solid black;")
 
     def highlight_cell(self, x, y, color):
         """
-        Highlight a specific cell in the grid with a color.
+        Highlight a specific cell in the grid with a border color, preserving the background color.
         """
         if 0 <= x < self.LATTICE_SIZE and 0 <= y < self.LATTICE_SIZE:
-            self.grid_cells[x][y].setStyleSheet(f"border: 2px solid {color};")
+            current_style = self.grid_cells[x][y].styleSheet()
+            updated_style = ";".join(
+                part for part in current_style.split(";") if not part.strip().startswith("border")
+            )
+            self.grid_cells[x][y].setStyleSheet(f"{updated_style}; border: 2px solid {color};")
 
 
 if __name__ == "__main__":

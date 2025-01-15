@@ -28,12 +28,41 @@ class Hubbard:
         self.lattice = np.zeros((2, self.size, self.size), dtype=int)  # 2 layers: up (0), down (1)
         electrons_placed = 0
 
-        while electrons_placed < self.num_electrons:
+        while electrons_placed < min(self.num_electrons, 2 * self.size **2):
             x, y = np.random.randint(0, self.size, size=2)
             spin = np.random.choice([0, 1])  # 0 for up, 1 for down
             if self.lattice[spin, x, y] == 0:  # Place if empty
                 self.lattice[spin, x, y] = 1
                 electrons_placed += 1
+
+    def initialize_af(self):
+        """
+        Initialize the lattice in an antiferromagnetic configuration.
+        Alternating spins (up and down) throughout the lattice.
+        If the lattice size is odd, print an error and do not initialize.
+        """
+        if self.size % 2 != 0:
+            print("Error: Lattice size must be even for antiferromagnetic initialization.")
+            return
+
+        self.lattice = np.zeros((2, self.size, self.size), dtype=int)
+        for x in range(self.size):
+            for y in range(self.size):
+                spin = (x + y) % 2  # Alternating spins
+                self.lattice[spin, x, y] = 1
+
+
+    def initialize_localized(self):
+        """
+        Initialize the lattice in a localized configuration.
+        Top half of the lattice is fully occupied.
+        """
+        self.lattice = np.zeros((2, self.size, self.size), dtype=int)
+        mid = self.size // 2
+        for x in range(mid):
+            for y in range(self.size):
+                self.lattice[0, x, y] = 1  # Up electron
+                self.lattice[1, x, y] = 1  # Down electron
 
     def get_lattice(self):
         """
