@@ -2,7 +2,7 @@ import numpy as np
 import random
 
 class Hubbard:
-    def __init__(self, size=5, u=1.0, t=1.0, num_electrons=10, seed=42):
+    def __init__(self, size=5, u=1.0, t=1.0, num_electrons=10, seed=None):
         """
         Initialize the Hubbard model simulation.
         :param size: Size of the NxN lattice.

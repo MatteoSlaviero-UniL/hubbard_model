@@ -180,7 +180,7 @@ class MainWindow(QtWidgets.QMainWindow):
             u=self.U,
             t=self.T,
             num_electrons=self.NUM_ELECTRONS,
-            seed=42  # Default seed
+            seed=None  # Default seed
         )
 
         self.hubbard.electric_field_strength = self.electric_field_strength  # Add electric field strength
@@ -288,9 +288,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.flux_label.setText(f"Flux: {self.flux}")
         self.conductivity_label.setText(f"Normalized average 'flux': {conductivity:.2f}%")
 
-        pairing_percentage = (self.hubbard.total_paired / self.hubbard.num_electrons * 100) if self.hubbard.num_electrons > 0 else 0
+        double_occupancy = (self.hubbard.total_paired / self.hubbard.num_electrons * 100) if self.hubbard.num_electrons > 0 else 0
 
-        self.pairing_label.setText(f"Double Occupancy: {self.hubbard.total_paired} ({pairing_percentage:.2f}%)")
+        self.pairing_label.setText(f"Double Occupancy: {self.hubbard.total_paired} ({double_occupancy:.2f}%)")
 
     def clear_highlights(self):
         """
