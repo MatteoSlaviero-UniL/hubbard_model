@@ -19,11 +19,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.hubbard = None
         self.success_count = 0
         self.fail_count = 0
-        self.total_electrons = 0
-        self.initial_paired_electrons = 0
-        self.total_paired = 0
-        self.pairing_events = 0
-        self.unpairing_events = 0
         self.autoplay_running = False
         self.electric_field_strength = 0.0
         self.flux = 0
@@ -197,26 +192,12 @@ class MainWindow(QtWidgets.QMainWindow):
         elif mode == "localized":
             self.hubbard.initialize_localized()
 
+        # Reset simulation counters
         self.success_count = 0
         self.fail_count = 0
         self.flux = 0
-        
-        self.total_paired = 0
-        self.total_electrons = 0
-        self.initial_paired_electrons = 0
-        self.pairing_events = 0
-        self.unpairing_events = 0
 
-        # Calculate initial paired electrons
-        for x in range(self.LATTICE_SIZE):
-            for y in range(self.LATTICE_SIZE):
-                if self.hubbard.lattice[0, x, y] == 1 and self.hubbard.lattice[1, x, y] == 1:
-                    self.initial_paired_electrons += 2
-                    self.total_paired += 2
-                    self.total_electrons += 2
-                elif self.hubbard.lattice[0, x, y] == 1 or self.hubbard.lattice[1, x, y] == 1:
-                    self.total_electrons +=1
-
+        # Update the UI
         self.update_counters()
         self.setup_grid()
         self.update_grid()
@@ -251,19 +232,11 @@ class MainWindow(QtWidgets.QMainWindow):
             QtWidgets.QMessageBox.warning(self, "Error", "Initialize the lattice first!")
             return
 
-        success, (x, y), spin, (target_x, target_y), broken_pairing = self.hubbard.simulate_step()
+        success, (x, y), spin, (target_x, target_y) = self.hubbard.simulate_step()
 
         if success:
             self.success_count += 1
             color = "green"
-
-            if broken_pairing:
-                self.unpairing_events += 1
-                self.total_paired -= 2
-            
-            if self.hubbard.lattice[0, target_x, target_y] == 1 and self.hubbard.lattice[1, target_x, target_y] == 1:
-                self.pairing_events += 1
-                self.total_paired +=2
 
             if target_x == 0 and x == self.LATTICE_SIZE - 1:  # Wrapped from right to left
                 self.flux += 1
@@ -315,9 +288,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.flux_label.setText(f"Flux: {self.flux}")
         self.conductivity_label.setText(f"Normalized average 'flux': {conductivity:.2f}%")
 
-        pairing_percentage = (self.total_paired / self.total_electrons * 100) if self.total_electrons > 0 else 0
+        pairing_percentage = (self.hubbard.total_paired / self.hubbard.num_electrons * 100) if self.hubbard.num_electrons > 0 else 0
 
-        self.pairing_label.setText(f"Paired Electrons: {self.total_paired} ({pairing_percentage:.2f}%)")
+        self.pairing_label.setText(f"Double Occupancy: {self.hubbard.total_paired} ({pairing_percentage:.2f}%)")
 
     def clear_highlights(self):
         """
