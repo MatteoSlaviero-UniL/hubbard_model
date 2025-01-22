@@ -5,11 +5,11 @@ class Hubbard:
     def __init__(self, size=5, u=1.0, t=1.0, num_electrons=10, seed=None):
         """
         Initialize the Hubbard model simulation.
-        :param size: Size of the NxN lattice.
+        :param size: N size of the NxN lattice.
         :param u: On-site repulsion parameter.
         :param t: Hopping parameter.
-        :param num_electrons: Total number of electrons (half up, half down).
-        :param seed: Random seed for reproducibility.
+        :param num_electrons: Total number of electrons used for random lattice initialization.
+        :param seed: Random seed for reproducibility, optional.
         """
         self.size = size
         self.u = u
@@ -69,7 +69,7 @@ class Hubbard:
     def initialize_localized(self):
         """
         Initialize the lattice in a localized configuration.
-        Top half of the lattice is fully occupied.
+        Left side of the lattice is fully occupied.
         """
         self.lattice = np.zeros((2, self.size, self.size), dtype=int)
         self.num_electrons = self.size ** 2
@@ -125,7 +125,7 @@ class Hubbard:
 
         # Choose a random neighbor (periodic boundary conditions)
         if random.random() < self.electric_field_strength:
-            # Bias towards right movement
+            # Bias towards right movement depending on electric field
             neighbors = [(0, 1), (0, -1), (1, 0), (1, 0)]  # Two (1, 0) for bias
         else:
             neighbors = [(0, 1), (0, -1), (1, 0), (-1, 0)]
@@ -141,7 +141,7 @@ class Hubbard:
         if target_state == 1:  # Same spin at target, step fails
             return False, (x, y), spin, (target_x, target_y)
 
-        # Energy difference calculation
+        # Energy difference calculation to decide whether to accept jump
         companion_start = self.lattice[1 - spin, x, y]
         companion_target = self.lattice[1 - spin, target_x, target_y]
         delta_energy = 0
