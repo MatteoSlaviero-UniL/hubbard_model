@@ -27,7 +27,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.timer = QtCore.QTimer(self)
         self.timer.timeout.connect(self.perform_step)
 
-        # Initialize UI
         self.init_ui()
 
     def init_ui(self):
@@ -41,7 +40,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setCentralWidget(central_widget)
         main_layout = QtWidgets.QVBoxLayout(central_widget)
 
-        # Parameter Controls
         control_layout = QtWidgets.QHBoxLayout()
 
         self.lattice_size_input = QtWidgets.QSpinBox(self)
